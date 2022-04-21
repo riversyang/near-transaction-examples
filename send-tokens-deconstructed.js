@@ -1,14 +1,17 @@
 const nearAPI = require('near-api-js');
 const sha256 = require('js-sha256');
+const BN = require('bn.js');
 //this is required if using a local .env file for private key
 require('dotenv').config();
 
-// configure accounts, network, and amount of NEAR to send
-// the amount is converted into yoctoNEAR (10^-24) using a near-api-js utility
-const sender = 'sender.testnet';
-const receiver = 'receiver.testnet';
+const sender = 'my-account.testnet';
+const receiver = 'sub-acct1.my-account.testnet';
+const token_account = 'oct.beta_oct_relay.testnet';
 const networkId = 'testnet';
-const amount = nearAPI.utils.format.parseNearAmount('1.5');
+const amount = '1000000000000000000'; // 1 OCT
+const FT_TRANSFER_GAS = new BN('300000000000000'); // default: 30T gas
+// To call function ft_transfer, must attach 1 yoctoNEAR deposit
+const FT_TRANSFER_DEPOSIT = new BN('1');
 
 // sets up a NEAR API/RPC provider to interact with the blockchain
 const provider = new nearAPI.providers
@@ -30,7 +33,7 @@ async function main() {
   );
 
   // checks to make sure provided key is a full access key
-  if(accessKey.permission !== 'FullAccess') {
+  if (accessKey.permission !== 'FullAccess') {
     return console.log(
       `Account [ ${sender} ] does not have permission to send tokens using key: [ ${publicKey} ]`
     );
@@ -41,27 +44,27 @@ async function main() {
   const nonce = ++accessKey.nonce;
 
   // constructs actions that will be passed to the createTransaction method below
-  const actions = [nearAPI.transactions.transfer(amount)];
-  
+  const actions = [nearAPI.transactions.functionCall('ft_transfer', { receiver_id: receiver, amount: amount, memo: null }, FT_TRANSFER_GAS, FT_TRANSFER_DEPOSIT)];
+
   // converts a recent block hash into an array of bytes 
   // this hash was retrieved earlier when creating the accessKey (Line 26)
   // this is required to prove the tx was recently constructed (within 24hrs)
   const recentBlockHash = nearAPI.utils.serialize.base_decode(accessKey.block_hash);
- 
+
   // create transaction
   const transaction = nearAPI.transactions.createTransaction(
-    sender, 
-    publicKey, 
-    receiver, 
-    nonce, 
-    actions, 
+    sender,
+    publicKey,
+    token_account,
+    nonce,
+    actions,
     recentBlockHash
   );
 
   // before we can sign the transaction we must perform three steps...
   // 1) serialize the transaction in Borsh
   const serializedTx = nearAPI.utils.serialize.serialize(
-    nearAPI.transactions.SCHEMA, 
+    nearAPI.transactions.SCHEMA,
     transaction
   );
   // 2) hash the serialized transaction using sha256
@@ -72,9 +75,9 @@ async function main() {
   // now we can sign the transaction :)
   const signedTransaction = new nearAPI.transactions.SignedTransaction({
     transaction,
-    signature: new nearAPI.transactions.Signature({ 
-      keyType: transaction.publicKey.keyType, 
-      data: signature.signature 
+    signature: new nearAPI.transactions.Signature({
+      keyType: transaction.publicKey.keyType,
+      data: signature.signature
     })
   });
 
@@ -84,7 +87,7 @@ async function main() {
     const signedSerializedTx = signedTransaction.encode();
     // sends transaction to NEAR blockchain via JSON RPC call and records the result
     const result = await provider.sendJsonRpc(
-      'broadcast_tx_commit', 
+      'broadcast_tx_commit',
       [Buffer.from(signedSerializedTx).toString('base64')]
     );
     // console results :)
@@ -93,7 +96,7 @@ async function main() {
     console.log('OPEN LINK BELOW to see transaction in NEAR Explorer!');
     console.log(`$https://explorer.${networkId}.near.org/transactions/${result.transaction.hash}`);
     console.log('--------------------------------------------------------------------------------------------');
-  } catch(error) {
+  } catch (error) {
     console.log(error);
   }
 }
