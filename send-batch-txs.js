@@ -12,7 +12,7 @@ const {
 const WALLET_ACCOUNT_ID = 'my-account.testnet';
 const privateKey = process.env.SENDER_PRIVATE_KEY;
 
-const TOKEN_CONTRACT_ID = 'f5cfbc74057c610c8ef151a439252680ac68c6dc.factory.bridge.near';
+const TOKEN_CONTRACT_ID = 'oct.beta_oct_relay.testnet';
 
 // Target account to transfer token
 const TARGET_ACCOUNT_ID = 'sub-acct2.my-account.testnet';
@@ -21,7 +21,7 @@ const TARGET_ACCOUNT_ID = 'sub-acct2.my-account.testnet';
 const NETWORK_ID = 'testnet';
 const DEFAULT_GAS = new BN('120000000000000');
 
-const keyPair = utils.KeyPair.fromString(privateKey);
+const keyPair = utils.KeyPair.fromString('ed25519:' + privateKey);
 const keyStore = new keyStores.InMemoryKeyStore();
 
 keyStore.setKey(NETWORK_ID, WALLET_ACCOUNT_ID, keyPair);
@@ -38,8 +38,6 @@ async function main() {
 
   const near = await connect(nearConfig);
   const account = await near.account(WALLET_ACCOUNT_ID);
-
-  console.log('Sending transactions...');
 
   const depositTx = transactions.functionCall(
     'storage_deposit',

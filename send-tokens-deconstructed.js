@@ -9,9 +9,10 @@ const receiver = 'sub-acct1.my-account.testnet';
 const token_account = 'oct.beta_oct_relay.testnet';
 const networkId = 'testnet';
 const amount = '1000000000000000000'; // 1 OCT
-const FT_TRANSFER_GAS = new BN('300000000000000'); // default: 30T gas
+const DEFAULT_GAS = new BN('30000000000000'); // default: 30T gas
 // To call function ft_transfer, must attach 1 yoctoNEAR deposit
 const FT_TRANSFER_DEPOSIT = new BN('1');
+const STORAGE_DEPOSIT = new BN('1250000000000000000000'); // 0.00125 NEAR
 
 // sets up a NEAR API/RPC provider to interact with the blockchain
 const provider = new nearAPI.providers
@@ -44,7 +45,7 @@ async function main() {
   const nonce = ++accessKey.nonce;
 
   // constructs actions that will be passed to the createTransaction method below
-  const actions = [nearAPI.transactions.functionCall('ft_transfer', { receiver_id: receiver, amount: amount, memo: null }, FT_TRANSFER_GAS, FT_TRANSFER_DEPOSIT)];
+  const actions = [nearAPI.transactions.functionCall('storage_deposit', { account_id: receiver }, DEFAULT_GAS, STORAGE_DEPOSIT), nearAPI.transactions.functionCall('ft_transfer', { receiver_id: receiver, amount: amount, memo: null }, DEFAULT_GAS, FT_TRANSFER_DEPOSIT)];
 
   // converts a recent block hash into an array of bytes 
   // this hash was retrieved earlier when creating the accessKey (Line 26)
